@@ -52,7 +52,7 @@ DISPLAY_CONFIG = "/dls_sw/i24/software/gda_versions/var/display.configuration"
 
 # Base directory for Jungfrau commissioning data. Update this per beamtime; each
 # acquisition gets a numbered subdirectory beneath it.
-JUNGFRAU_DATA_DIR = Path("/dls/i24/data/2026/cm44177-1/jungfrau")
+JUNGFRAU_DATA_DIR = Path("/dls/i24/data/2026/cm44177-3/jungfrau")
 
 
 class _RequestedFilenameProvider(FilenameProvider):
