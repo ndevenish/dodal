@@ -2,11 +2,15 @@ from functools import cache
 from pathlib import Path
 
 from daq_config_server.client import ConfigClient
-from ophyd_async.core import AutoMaxIncrementingPathProvider, PathProvider
+from ophyd_async.core import (
+    AutoMaxIncrementingPathProvider,
+    PathProvider,
+    StaticFilenameProvider,
+    StaticPathProvider,
+)
 
 from dodal.common.beamlines.beamline_utils import BL, set_config_client
 from dodal.common.beamlines.beamline_utils import set_beamline as set_utils_beamline
-from dodal.common.visit import LocalDirectoryServiceClient, StaticVisitPathProvider
 from dodal.device_manager import DeviceManager
 from dodal.devices.attenuator.attenuator import EnumFilterAttenuator
 from dodal.devices.attenuator.filter_selections import (
@@ -46,6 +50,10 @@ ZOOM_PARAMS_FILE = (
 )
 DISPLAY_CONFIG = "/dls_sw/i24/software/gda_versions/var/display.configuration"
 
+# Base directory for Jungfrau commissioning data. Update this per beamtime; each
+# acquisition gets a numbered subdirectory beneath it.
+JUNGFRAU_DATA_DIR = Path("/dls/i24/data/2026/cm44177-1/jungfrau")
+
 
 BL = get_beamline_name("i24")
 set_log_beamline(BL)
@@ -65,10 +73,15 @@ devices = DeviceManager()
 @devices.fixture
 @cache
 def path_provider() -> PathProvider:
-    return StaticVisitPathProvider(
-        BL,
-        Path("/tmp"),
-        client=LocalDirectoryServiceClient(),
+    # A provider that needs no external service, so detectors can write when running
+    # outside blueapi or without numtracker configured. When blueapi is configured with
+    # numtracker it overrides this fixture with its own StartDocumentPathProvider, which
+    # takes filenames from the `detector_file_template` run metadata instead.
+    # Note this must not require a device_name, as AutoMaxIncrementingPathProvider (see
+    # the jungfrau factory below) calls its base provider without one.
+    return StaticPathProvider(
+        StaticFilenameProvider("jungfrau"),
+        JUNGFRAU_DATA_DIR,
     )
 
 
