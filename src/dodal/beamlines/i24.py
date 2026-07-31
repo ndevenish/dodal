@@ -4,8 +4,8 @@ from pathlib import Path
 from daq_config_server.client import ConfigClient
 from ophyd_async.core import (
     AutoMaxIncrementingPathProvider,
+    FilenameProvider,
     PathProvider,
-    StaticFilenameProvider,
     StaticPathProvider,
 )
 
@@ -55,6 +55,28 @@ DISPLAY_CONFIG = "/dls_sw/i24/software/gda_versions/var/display.configuration"
 JUNGFRAU_DATA_DIR = Path("/dls/i24/data/2026/cm44177-1/jungfrau")
 
 
+class _RequestedFilenameProvider(FilenameProvider):
+    """The name a plan has asked the commissioning jungfrau to write under.
+
+    Temporary, for as long as i24 writes jungfrau data without numtracker. Numtracker
+    takes the name from the `detector_file_template` run metadata, and once blueapi is
+    configured with it the path_provider fixture below is replaced and this goes unused.
+    Until then nothing carries the requested name to the filewriter, so a plan sets it
+    here before collecting and every collection is otherwise called "jungfrau".
+
+    Remove with https://github.com/DiamondLightSource/mx-bluesky/issues/1527.
+    """
+
+    def __init__(self, filename: str) -> None:
+        self.filename = filename
+
+    def __call__(self, datakey_name: str | None = None) -> str:
+        return self.filename
+
+
+JUNGFRAU_FILENAME = _RequestedFilenameProvider("jungfrau")
+
+
 BL = get_beamline_name("i24")
 set_log_beamline(BL)
 set_utils_beamline(BL)
@@ -80,7 +102,7 @@ def path_provider() -> PathProvider:
     # Note this must not require a device_name, as AutoMaxIncrementingPathProvider (see
     # the jungfrau factory below) calls its base provider without one.
     return StaticPathProvider(
-        StaticFilenameProvider("jungfrau"),
+        JUNGFRAU_FILENAME,
         JUNGFRAU_DATA_DIR,
     )
 
